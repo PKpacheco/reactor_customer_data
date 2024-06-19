@@ -64,6 +64,7 @@ def fetch_riders_data():
 
     logging.info(f"Fetched {len(all_data)} riders.")
     return {'data': all_data}
+    # return {'data': all_data[:limit]}
 
 
 def save_to_csv(data, filename):
@@ -88,9 +89,20 @@ def save_to_csv(data, filename):
         writer.writerow(columns)
         
         for rider in data["data"]:
-            mailing_address_unit = rider['metadata'].get('mailingAddressUnit', '') if rider.get("metadata") else ""
-            mailing_address = rider['metadata'].get('mailingAddress', '') if rider.get("metadata") else ""
+            logging.info(f"Processing rider: {rider.get('externalNumericId', 'N/A')}")
+            metadata = rider.get('metadata', {})
+            if not metadata:
+                logging.warning(f"No metadata found for rider: {rider}")
+                continue
+            
+            logging.debug(f"Rider metadata: {metadata}")
+
+            mailing_address_unit = metadata.get('mailing_address_unit', '')
+            mailing_address = metadata.get('mailing_address', '')
             full_mailing_address = f"{mailing_address_unit}-{mailing_address}" if mailing_address_unit else mailing_address
+
+            if not full_mailing_address:
+                logging.warning(f"Incomplete address information for rider: {rider}")
 
             row = [
                 rider.get("externalNumericId", ""),
@@ -100,18 +112,20 @@ def save_to_csv(data, filename):
                 "",  # Telephone Ext (empty column)
                 rider.get("email", ""),
                 full_mailing_address,
-                # f"{rider['metadata'].get('mailingAddressUnit', '')}-{rider['metadata'].get('mailingAddress', '')}" if rider.get("metadata") else "",
-                rider['metadata'].get("mailingCity", "") if rider.get("metadata") else "",
-                rider['metadata'].get("provinceState", "") if rider.get("metadata") else "",
-                rider['metadata'].get("postalZipCode", "") if rider.get("metadata") else ""
+                metadata.get("mailing_city", ""),
+                metadata.get("mailing_province_state", ""),
+                metadata.get("mailing_postal_zip_code", "")
             ]
             writer.writerow(row)
     logging.info(f"Data successfully saved to {filename}")
+
 
 def main():
     try:
         logging.info("Starting to fetch rider data...")
         riders_data = fetch_riders_data()
+
+        # riders_data = fetch_riders_data(limit=30)
         current_date = datetime.now().strftime("%Y-%m-%d")
         filename = f"riders_{current_date}.csv"
         save_to_csv(riders_data, filename)
