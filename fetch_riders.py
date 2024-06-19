@@ -67,6 +67,24 @@ def fetch_riders_data():
     # return {'data': all_data[:limit]}
 
 
+def format_phone_number(phone_number):
+    """
+    Format the phone number to (XXX)XXX-XXXX format instead if 1204XXXXXXX.
+    """
+    if not phone_number:
+        return ""
+
+    phone_number = phone_number.replace("+", "").replace("-", "").replace(" ", "")
+    if len(phone_number) == 11 and phone_number.startswith("1"):
+        phone_number = phone_number[1:]
+    if len(phone_number) == 10:
+        area_code = phone_number[:3]
+        prefix = phone_number[3:6]
+        line_number = phone_number[6:]
+        return f"({area_code}){prefix}-{line_number}"
+    return phone_number
+
+
 def save_to_csv(data, filename):
     """
     Save the Spare rider data to a CSV file.
@@ -103,12 +121,14 @@ def save_to_csv(data, filename):
 
             if not full_mailing_address:
                 logging.warning(f"Incomplete address information for rider: {rider}")
+            
+            phone_number = format_phone_number(rider.get("phoneNumber", ""))
 
             row = [
                 rider.get("externalNumericId", ""),
                 rider.get("firstName", ""),
                 rider.get("lastName", ""),
-                rider.get("phoneNumber", ""),
+                phone_number,
                 "",  # Telephone Ext (empty column)
                 rider.get("email", ""),
                 full_mailing_address,
